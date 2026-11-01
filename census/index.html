@@ -42,6 +42,8 @@ summary:hover{color:var(--ac)}
 @media (prefers-reduced-motion:reduce){summary::before{transition:none}}
 .g td{font-weight:700;background:rgba(255,255,255,.05)}
 .v td:first-child{padding-left:28px;color:var(--mu)}
+.sp td:nth-child(2),.sp th:nth-child(2){text-align:left}
+.sp .tag{margin-left:0}
 .t-End{color:#7bc96f}.t-Short{color:#f2a14e}.t-New{color:#4fc3d9}
 .tag{display:inline-block;margin-left:8px;padding:0 8px;border:1px solid currentColor;border-radius:99px;font-size:.72rem;line-height:1.5;white-space:nowrap}
 .t-Inflatable{color:#4fc3d9}.t-Bedazzled{color:#e8618c}.t-RealPerson{color:#f2c14e}
@@ -63,6 +65,7 @@ td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}
 .keys i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
 .err{background:#4a1d2a;padding:16px;border-radius:8px}
 .note{color:var(--mu);font-size:.9rem}
+footer a{color:var(--ac)}
 footer{margin-top:60px;color:var(--mu)}
 </style>
 </head>
@@ -75,7 +78,7 @@ footer{margin-top:60px;color:var(--mu)}
 <p id="status" class="sr" role="status"></p>
 <section id="year" aria-labelledby="yh"></section>
 <section id="trends" aria-labelledby="th"></section>
-<footer>Happy Halloween!</footer>
+<footer><p>Questions or corrections? Email <a href="mailto:jones.anaya@gmail.com?subject=Halloween%20Census">jones.anaya@gmail.com</a>.</p><p>Happy Halloween!</p></footer>
 </main>
 <script>
 const CATS=['Movie / Show','Critter','Profession','SuperMythical','Video Game','Food','Popculture','Mundane','Other'];
@@ -136,6 +139,7 @@ let FR=new Map();
 const nmF=n=>n.replace(/^(.*), (The|A)$/,'$2 $1');
 function buildFR(){const m=new Map();rows.forEach(r=>{const k=bkey(r).toLowerCase();const o=m.get(k)||{n:0,f:new Map()};o.n++;if(r.franchise){const f=r.franchise.trim();o.f.set(f,(o.f.get(f)||0)+1)}m.set(k,o)});m.forEach((o,k)=>{const t=[...o.f.entries()].sort((a,b)=>b[1]-a[1])[0];FR.set(k,t&&t[1]/o.n>=0.5?t[0]:'')})}
 const lab=(n,lc)=>{const f=FR.get(n.trim().toLowerCase()),nm=f?nmF(f):'';return(lc?n.toLowerCase():n)+(nm&&nm.toLowerCase()!==n.trim().toLowerCase()?` (${nm})`:'')};
+const bd=k=>k==='end'?'<span class="tag t-End">Enduring</span>':k==='short'?'<span class="tag t-Short">Short-lived</span>':k==='new'?'<span class="tag t-New">New</span>':'';
 const tag=k=>k?`<span class="tag t-${k.replace(' ','')}">${k}</span>`:'';
 const legend=(parts,total,prev,y,withN)=>`<ul class="leg">${parts.map(x=>`<li><i style="background:${col(x.c)}"></i>${x.c}<small>${prev&&prev.length?prev.filter(r=>cat(r)===x.c).length+' in '+(y-1):''}</small><b>${withN?x.n+' · ':''}${pct(x.n,total)}%</b></li>`).join('')}</ul>`;
 function show(y){
@@ -182,11 +186,9 @@ function stay(keyf,minN){
   return[...m.values()].filter(o=>o.n>=minN).map(o=>{const yrs=years.filter(y=>o.by[y]).length,peak=Math.max(...years.map(y=>o.by[y]||0));return{...o,peak,kind:yrs>=need?'end':(peak/o.n>=0.7?(o.by[years[years.length-1]]===peak?'new':'short'):'')}}).sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name));
 }
 function staying(){
-  const nm=n=>n.replace(/^(.*), (The|A)$/,'$2 $1'),need=Math.ceil(years.length*0.8);
-  const tbl=l=>`<div class="tw"><table class="fr"><tr><th>Name</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>${l.map(o=>`<tr><td>${e(lab(o.name))}</td>${years.map(y=>{const v=o.by[y]||0;return o.kind&&o.kind!=='end'&&v===o.peak?`<td class="pk" style="color:var(--ac);font-weight:700" title="Peak year">${v}<span class="sr"> (peak year)</span></td>`:`<td>${v||'–'}</td>`}).join('')}<td>${o.n}</td></tr>`).join('')}</table></div>`;
-  const det=(t,l)=>l.length?`<details open><summary>${t}<span>${l.length}</span></summary>${tbl(l)}</details>`:'';
-  const C=stay(bkey,CMIN),pk=(L,k)=>L.filter(o=>o.kind===k);
-  return`<h3>Staying power</h3><p class="note">Enduring means seen in at least ${need} of the ${years.length} years. Short-lived means 70% or more of the costumes came in a single year, which is highlighted and underlined. New means that most of the costumes came in the latest year, so it is too early to tell. Only costumes seen ${CMIN} or more times are included. Franchises with ${FMIN} or more costumes carry the same labels in the list below.</p>`+det('Enduring costumes',pk(C,'end'))+det('Short-lived costumes',pk(C,'short'))+det('New costumes',pk(C,'new'));
+  const need=Math.ceil(years.length*0.8),C=stay(bkey,CMIN).filter(o=>o.kind);
+  const row=o=>`<tr><td>${e(lab(o.name))}</td><td>${bd(o.kind)}</td>${years.map(y=>{const v=o.by[y]||0;return o.kind!=='end'&&v===o.peak?`<td class="pk" style="color:var(--ac);font-weight:700" title="Peak year">${v}<span class="sr"> (peak year)</span></td>`:`<td>${v||'–'}</td>`}).join('')}<td>${o.n}</td></tr>`;
+  return`<h3>Staying power</h3><p class="note">Enduring means seen in at least ${need} of the ${years.length} years. Short-lived means 70% or more of the costumes came in a single year, which is highlighted and underlined. New means that most of the costumes came in the latest year, so it is too early to tell. Only costumes seen ${CMIN} or more times are included. Franchises with ${FMIN} or more costumes carry the same labels in the list below.</p><div class="tw"><table class="fr sp"><tr><th>Costume</th><th>Pattern</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>${C.map(row).join('')}</table></div>`;
 }
 function franchises(){
   const m=new Map();
@@ -194,7 +196,6 @@ function franchises(){
   const F=[...m.values()].filter(f=>f.n>3).sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name));
   const nm=n=>n.replace(/^(.*), (The|A)$/,'$2 $1');
   const FS=new Map(stay(r=>r.franchise,FMIN).map(o=>[o.key,o.kind]));
-  const bd=k=>k==='end'?'<span class="tag t-End">Enduring</span>':k==='short'?'<span class="tag t-Short">Short-lived</span>':k==='new'?'<span class="tag t-New">New</span>':'';
   const cell=v=>v||'–';
   return`<h3>Franchises over time</h3><p class="note">Franchises with more than 3 costumes across all years. Select one to see each costume and how many of them we saw each year.</p>`+F.map(f=>{
     const cs=[...f.c.values()].sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name));
@@ -208,10 +209,6 @@ function trends(){
   h+=`</div>${altTable(S,CATS.filter(c=>S.some(s=>s.byCat[c].length)),(s,c)=>s.byCat[c].length,s=>s.hum.length)}${dogBars(S)}<h3>Year by year</h3><div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
   S.forEach(s=>{const T=tally(s.all,bkey),t=T.filter(x=>x.n===T[0].n);h+=`<tr><td>${s.y}</td><td>${s.all.length}</td><td>${s.uniq}</td><td>${e(t.map(x=>lab(x.name)).join(', '))}</td><td>${t[0].n}</td></tr>`});
   h+=`</table></div>`;
-  const fr=tally(rows.filter(r=>cat(r)==='Movie / Show'),r=>r.franchise||r.costume).slice(0,10);
-  const co=tally(rows,bkey).slice(0,10);
-  h+=`<h3>All-time favorites</h3><div class="tw"><table><tr><th>Costume</th><th>Total</th></tr>${co.map(c=>`<tr><td>${e(lab(c.name))}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
-  h+=`<div class="tw"><table><tr><th>Movie, show or franchise</th><th>Total</th></tr>${fr.map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
   h+=staying()+franchises();document.getElementById('trends').innerHTML=h;a11y(document.getElementById('trends'));
 }
 </script>
