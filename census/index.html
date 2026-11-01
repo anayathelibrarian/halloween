@@ -44,6 +44,8 @@ summary:hover{color:var(--ac)}
 .t-Inflatable{color:#4fc3d9}.t-Bedazzled{color:#e8618c}.t-RealPerson{color:#f2c14e}
 summary span{margin-left:auto;color:var(--mu);font-variant-numeric:tabular-nums}
 .tw{overflow-x:auto}
+.fr td+td,.fr th+th{text-align:right;font-variant-numeric:tabular-nums}
+.fr td:first-child{min-width:150px}
 table{border-collapse:collapse;width:100%;margin:0 0 16px;font-size:.95rem}
 th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--mu);font-weight:500}
@@ -109,21 +111,28 @@ function show(y){
   const s=stats(y),p=years.includes(y-1)?stats(y-1):null,top=tally(s.all,r=>r.costume)[0];
   const parts=CATS.map(c=>({c,n:s.byCat[c].length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
   const cnt=k=>s.all.filter(r=>r.pizazz===k).length,infl=cnt('Inflatable'),bed=cnt('Bedazzled'),real=cnt('Real Person');
-  const ex=[infl&&`${infl} inflatable`,bed&&`${bed} bedazzled`,real&&`${real} based on real people`].filter(Boolean);
+  const ex=[[infl,'inflatable'],[bed,'bedazzled'],[real,'based on real people']].filter(x=>x[0]).map((x,i)=>i?`${x[0]} ${x[1]}`:`${x[0]} ${x[0]>1?'were':'was'} ${x[1]}`);
   let h=`<h2>${y}</h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume was ${e(top.name.toLowerCase())}, with ${top.n} trick or treaters.${ex.length?` Of the costumes, ${list(ex)}.`:''}</p>`;
   h+=`<h3>Human trick or treaters by category</h3><p>${s.hum.length} of ${s.all.length} trick or treaters were humans, including children and adults.</p>`;
   h+=`<div class="chart">${donut(parts,s.hum.length)}${legend(parts,s.hum.length)}</div><p class="note" style="margin:24px 0 4px">Select a category to see every costume in it.</p><div>`;
   parts.forEach(x=>{
     const d=p?pct(x.n,s.hum.length)-pct(p.byCat[x.c].length,p.hum.length):0;
     const ch=p?(d?`${d>0?'up':'down'} ${Math.abs(d)} pt${Math.abs(d)>1?'s':''} vs ${y-1}`:`same as ${y-1}`):'';
-    const rows_=agg(s.byCat[x.c]).sort(x.c==='Movie / Show'?(a,b)=>(a.r.franchise||a.r.costume).localeCompare(b.r.franchise||b.r.costume)||a.r.costume.localeCompare(b.r.costume):(a,b)=>b.n-a.n||a.r.costume.localeCompare(b.r.costume));
-    const body=`<tr><th>Costume</th><th>Category</th><th>Subcategories</th><th>Media property</th><th>Count</th></tr>`+rows_.map(({r,n})=>`<tr><td>${e(r.costume)}${tag(r.pizazz)}</td><td>${e(r.category)}</td><td>${e([r.category2,r.profession].filter(Boolean).join(', '))}</td><td>${e(r.franchise)}</td><td>${n}</td></tr>`).join('');
+    let body;
+    if(x.c==='Movie / Show'){
+      body=`<tr><th>Movie, show or franchise</th><th>Costumes</th><th>Count</th></tr>`+tally(s.byCat[x.c],r=>r.franchise||r.costume).map(f=>{
+        const inner=agg(s.byCat[x.c].filter(r=>(r.franchise||r.costume).trim().toLowerCase()===f.name.toLowerCase())).sort((a,b)=>b.n-a.n||a.r.costume.localeCompare(b.r.costume));
+        return`<tr><td>${e(f.name)}</td><td>${inner.map(({r,n})=>e(r.costume)+(n>1?` (${n})`:'')+tag(r.pizazz)).join('<br>')}</td><td>${f.n}</td></tr>`}).join('');
+    }else{
+      const oth=x.c==='Other',l2=agg(s.byCat[x.c]).sort((a,b)=>b.n-a.n||a.r.costume.localeCompare(b.r.costume));
+      body=`<tr><th>Costume</th>${oth?'<th>Category</th>':''}<th>Subcategories</th><th>Media property</th><th>Count</th></tr>`+l2.map(({r,n})=>`<tr><td>${e(r.costume)}${tag(r.pizazz)}</td>${oth?`<td>${e(r.category)}</td>`:''}<td>${e([r.category2,r.profession].filter(Boolean).join(', '))}</td><td>${e(r.franchise)}</td><td>${n}</td></tr>`).join('');
+    }
     h+=`<details><summary><i style="width:12px;height:12px;border-radius:3px;background:${col(x.c)}"></i>${x.c}<span>${x.n}${ch?' · '+ch:''}</span></summary><div class="tw"><table>${body}</table></div></details>`;
   });
   h+=`</div>`;
   if(s.dog.length){
     const dp=CATS.map(c=>({c,n:s.dog.filter(r=>cat(r)===c).length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
-    h+=`<h3>Dog trick or treaters by category</h3><p>${s.dog.length} of ${s.all.length} trick or treaters were dogs.</p><div class="chart">${donut(dp,s.dog.length,'Costume categories worn by dogs')}${legend(dp,s.dog.length,p&&p.dog,y,true)}</div><div class="tw" style="margin-top:16px"><table><tr><th>Category</th><th>Costume</th><th>Media property</th><th>Count</th></tr>${agg(s.dog).map(({r,n})=>`<tr><td>${e(r.category)}</td><td>${e(r.costume)}${tag(r.pizazz)}</td><td>${e(r.franchise)}</td><td>${n}</td></tr>`).join('')}</table></div>`;
+    h+=`<h3>Dog trick or treaters by category</h3><p>${s.dog.length} of ${s.all.length} trick or treaters were dogs.</p><div class="chart">${donut(dp,s.dog.length,'Costume categories worn by dogs')}${legend(dp,s.dog.length,p&&p.dog,y,true)}</div><div class="tw" style="margin-top:16px"><table><tr><th>Category</th><th>Costume</th><th>Count</th></tr>${agg(s.dog).map(({r,n})=>`<tr><td>${e(r.category)}</td><td>${e(r.costume)}${tag(r.pizazz)}</td><td>${n}</td></tr>`).join('')}</table></div>`;
   }
   document.getElementById('year').innerHTML=h;
 }
@@ -131,6 +140,17 @@ function dogBars(S){
   const D=S.filter(s=>s.dog.length);if(!D.length)return'';
   const used=CATS.filter(c=>D.some(s=>s.dog.some(r=>cat(r)===c)));
   return`<h3>Dog costumes by category over time</h3><div class="keys">${used.map(c=>`<span><i style="background:${col(c)}"></i>${c}</span>`).join('')}</div><div class="bars">${D.map(s=>`<div class="row"><b>${s.y}</b><div class="bar">${used.map(c=>{const n=s.dog.filter(r=>cat(r)===c).length;return n?`<div style="flex:${n};background:${col(c)}" title="${c}: ${n}">${n}</div>`:''}).join('')}</div></div>`).join('')}</div><p class="note">Numbers show how many dogs wore each category. Each year has only a few dogs, so the shares swing a lot.</p>`;
+}
+function franchises(){
+  const m=new Map();
+  rows.forEach(r=>{if(!r.franchise)return;const k=r.franchise.trim().toLowerCase();const o=m.get(k)||{name:r.franchise.trim(),n:0,c:new Map()};o.n++;const ck=r.costume.trim().toLowerCase();const c=o.c.get(ck)||{name:r.costume.trim(),n:0,by:{}};c.n++;c.by[r.year]=(c.by[r.year]||0)+1;o.c.set(ck,c);m.set(k,o)});
+  const F=[...m.values()].filter(f=>f.n>3).sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name));
+  const nm=n=>n.replace(/^(.*), (The|A)$/,'$2 $1');
+  const cell=v=>v||'–';
+  return`<h3>Franchises over time</h3><p class="note">Franchises with more than 3 costumes across all years. Select one to see each costume and how many of them we saw each year.</p>`+F.map(f=>{
+    const cs=[...f.c.values()].sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name));
+    const tot=y=>cs.reduce((t,c)=>t+(c.by[y]||0),0);
+    return`<details><summary>${e(nm(f.name))}<span>${f.n} total</span></summary><div class="tw"><table class="fr"><tr><th>Costume</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>${cs.map(c=>`<tr><td>${e(c.name)}</td>${years.map(y=>`<td>${cell(c.by[y])}</td>`).join('')}<td>${c.n}</td></tr>`).join('')}<tr><th>All ${e(nm(f.name))} costumes</th>${years.map(y=>`<th>${cell(tot(y))}</th>`).join('')}<th>${f.n}</th></tr></table></div></details>`}).join('');
 }
 function trends(){
   const S=years.map(y=>({y,...stats(y)}));
@@ -143,7 +163,7 @@ function trends(){
   const co=tally(rows,r=>r.costume).slice(0,10);
   h+=`<h3>All-time favorites</h3><div class="tw"><table><tr><th>Costume</th><th>Total</th></tr>${co.map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
   h+=`<div class="tw"><table><tr><th>Movie, show or franchise</th><th>Total</th></tr>${fr.map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
-  document.getElementById('trends').innerHTML=h;
+  h+=franchises();document.getElementById('trends').innerHTML=h;
 }
 </script>
 </body>
