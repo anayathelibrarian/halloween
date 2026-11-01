@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halloween Census: Westside Drive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#17121f;--card:#221a2e;--line:#382d49;--tx:#f1ebf7;--mu:#a79bb8;--ac:#ff7a1a;color-scheme:dark;
+--hd:"Bricolage Grotesque",Georgia,serif;--bd:system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 var(--bd)}
+main{max-width:920px;margin:0 auto;padding:40px 20px 80px}
+h1,h2,h3{font-family:var(--hd);line-height:1.15;margin:0}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;color:var(--ac);letter-spacing:-.02em}
+h2{font-size:1.7rem;font-weight:800;margin:48px 0 12px}
+h3{font-size:1.15rem;font-weight:500;margin:28px 0 8px;color:var(--mu)}
+.back{display:inline-block;margin-bottom:20px;color:var(--mu)}
+.back a{color:var(--mu)}
+.back a:hover{color:var(--tx)}
+.sub{color:var(--mu);margin:8px 0 28px;max-width:60ch}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.tabs button{font:500 1rem var(--bd);color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 18px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--ac);color:#1a0f05;border-color:var(--ac);font-weight:700}
+button:focus-visible,summary:focus-visible{outline:3px solid #fff;outline-offset:2px}
+p{max-width:68ch}
+.chart{display:flex;flex-wrap:wrap;gap:28px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px}
+.chart svg{width:230px;height:230px;flex:none}
+.leg{list-style:none;margin:0;padding:0;flex:1;min-width:240px}
+.leg li{display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid var(--line)}
+.leg i{width:12px;height:12px;border-radius:3px;flex:none}
+.leg b{margin-left:auto;font-variant-numeric:tabular-nums}
+.leg small{color:var(--mu);min-width:92px;text-align:right}
+details{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;padding:12px 0;font-weight:500;display:flex;gap:10px;align-items:center}
+summary span{margin-left:auto;color:var(--mu);font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;margin:0 0 16px;font-size:.95rem}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mu);font-weight:500}
+td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.bars{display:grid;gap:10px;margin:16px 0}
+.row{display:grid;grid-template-columns:48px 1fr;gap:10px;align-items:center}
+.bar{display:flex;height:34px;border-radius:6px;overflow:hidden}
+.bar div{font-size:.75rem;color:#120c1a;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden}
+.keys{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--mu);margin-bottom:8px}
+.keys i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.err{background:#4a1d2a;padding:16px;border-radius:8px}
+footer{margin-top:60px;color:var(--mu)}
+</style>
+</head>
+<body>
+<main>
+<nav class="back"><a href="../">Halloween</a> · <a href="https://anayathelibrarian.github.io/">Stitches, Stories, and Spreadsheets</a></nav>
+<h1>Halloween Census: Westside Drive</h1>
+<p class="sub">Every trick or treater’s costume at our door, counted since 2022.</p>
+<div class="tabs" id="tabs" role="tablist" aria-label="Year"></div>
+<section id="year" aria-live="polite"></section>
+<section id="trends"></section>
+<footer>Happy Halloween!</footer>
+</main>
+<script>
+const CATS=['Movie / Show','Critter','Profession','Supernatural','Video Game','Food','Popculture','Mundane','Mythology','Other'];
+const COL=['#ff7a1a','#f2c14e','#7bc96f','#9b7cf0','#4fc3d9','#e8618c','#3f8ef0','#b0a7bf','#d9a066','#6b6179'];
+const col=c=>COL[CATS.indexOf(c)];
+let rows=[],years=[];
+const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cat=r=>CATS.includes(r.category)?r.category:'Other';
+const tally=(a,f)=>{const m=new Map();a.forEach(r=>{const k=f(r);if(!k)return;const key=k.trim().toLowerCase();const o=m.get(key)||{name:k.trim(),n:0};o.n++;m.set(key,o)});return[...m.values()].sort((x,y)=>y.n-x.n||x.name.localeCompare(y.name))};
+const pct=(n,t)=>t?Math.round(n/t*100):0;
+
+fetch('data.json').then(r=>r.json()).then(j=>{
+  rows=j.rows.map(r=>Object.fromEntries(j.cols.map((c,i)=>[c,r[i]])));
+  years=[...new Set(rows.map(r=>r.year))].sort();
+  const want=+location.hash.slice(1);
+  const start=years.includes(want)?want:years[years.length-1];
+  const t=document.getElementById('tabs');
+  t.innerHTML=[...years].reverse().map(y=>`<button role="tab" data-y="${y}">${y}</button>`).join('');
+  t.onclick=ev=>{const y=+ev.target.dataset.y;if(y){location.hash=y;show(y)}};
+  show(start);trends();
+}).catch(()=>{document.getElementById('year').innerHTML='<p class="err">Could not load data.json. If you opened this file directly from your computer, serve the folder instead (for example, run “python3 -m http.server” and open localhost:8000).</p>'});
+
+function stats(y){
+  const all=rows.filter(r=>r.year===y),hum=all.filter(r=>r.wearer==='Human'),dog=all.filter(r=>r.wearer==='Dog');
+  const byCat={};CATS.forEach(c=>byCat[c]=hum.filter(r=>cat(r)===c));
+  return{all,hum,dog,byCat,uniq:new Set(all.map(r=>r.costume)).size};
+}
+function donut(parts,total){
+  const R=60,C=2*Math.PI*R;let off=0;
+  const segs=parts.map(p=>{const l=p.n/total*C,s=`<circle r="${R}" cx="100" cy="100" fill="none" stroke="${col(p.c)}" stroke-width="40" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`;off+=l;return s}).join('');
+  return`<svg viewBox="0 0 200 200" role="img" aria-label="Costume categories worn by humans">${segs}<text x="100" y="106" text-anchor="middle" fill="#f1ebf7" font-family="Bricolage Grotesque,serif" font-weight="800" font-size="26">${total}</text></svg>`;
+}
+function show(y){
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',+b.dataset.y===y));
+  const s=stats(y),p=years.includes(y-1)?stats(y-1):null,top=tally(s.all,r=>r.costume)[0];
+  const parts=CATS.map(c=>({c,n:s.byCat[c].length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
+  const infl=s.all.filter(r=>r.pizazz==='Inflatable').length;
+  const delta=c=>{if(!p)return'';const d=pct(s.byCat[c].length,s.hum.length)-pct(p.byCat[c].length,p.hum.length);return d?`${d>0?'up':'down'} ${Math.abs(d)} pt${Math.abs(d)>1?'s':''}`:'same'};
+  let h=`<h2>${y}</h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume was ${e(top.name.toLowerCase())}, with ${top.n} trick or treaters.${infl?` ${infl} wore inflatable costumes.`:''}</p>`;
+  h+=`<h3>Human trick or treaters</h3><p>${s.hum.length} of ${s.all.length} trick or treaters were humans, including children and adults.</p>`;
+  h+=`<div class="chart">${donut(parts,s.hum.length)}<ul class="leg">${parts.map(x=>`<li><i style="background:${col(x.c)}"></i>${x.c}<small>${p?delta(x.c)+' vs '+(y-1):''}</small><b>${x.n} · ${pct(x.n,s.hum.length)}%</b></li>`).join('')}</ul></div>`;
+  h+=`<h3>Costumes by category</h3>`;
+  parts.forEach(x=>{
+    const list=s.byCat[x.c];let body;
+    if(x.c==='Movie / Show'){
+      const g=tally(list,r=>r.franchise||r.costume);
+      body=`<tr><th>Movie, show or franchise</th><th>Costumes</th><th>Count</th></tr>`+g.map(f=>{
+        const inner=list.filter(r=>(r.franchise||r.costume).trim().toLowerCase()===f.name.toLowerCase());
+        const cs=tally(inner,r=>r.costume).map(c=>c.n>1?`${e(c.name)} (${c.n})`:e(c.name)).join(', ');
+        return`<tr><td>${e(f.name)}</td><td>${cs}</td><td>${f.n}</td></tr>`}).join('');
+    }else body=`<tr><th>Costume</th><th>Count</th></tr>`+tally(list,r=>r.costume).map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('');
+    h+=`<details><summary><i style="width:12px;height:12px;border-radius:3px;background:${col(x.c)}"></i>${x.c}<span>${x.n} · ${pct(x.n,s.hum.length)}%</span></summary><div class="tw"><table>${body}</table></div></details>`;
+  });
+  if(s.dog.length){
+    const dc=CATS.map(c=>({c,n:s.dog.filter(r=>cat(r)===c).length})).filter(x=>x.n);
+    h+=`<h3>Dog trick or treaters</h3><p>${s.dog.length} of ${s.all.length} trick or treaters were dogs. Dog costumes were ${dc.map(x=>pct(x.n,s.dog.length)+'% '+x.c.toLowerCase()).join(', ')}.</p><div class="tw"><table><tr><th>Category</th><th>Costume</th><th>Count</th></tr>${s.dog.map(r=>`<tr><td>${cat(r)}</td><td>${e(r.costume)}</td><td>1</td></tr>`).join('')}</table></div>`;
+  }
+  document.getElementById('year').innerHTML=h;
+}
+function trends(){
+  const S=years.map(y=>({y,...stats(y)}));
+  let h=`<h2>Trends, ${years[0]}–${years[years.length-1]}</h2><h3>Share of human costumes by category</h3><div class="keys">${CATS.map(c=>`<span><i style="background:${col(c)}"></i>${c}</span>`).join('')}</div><div class="bars">`;
+  S.forEach(s=>{h+=`<div class="row"><b>${s.y}</b><div class="bar">${CATS.map(c=>{const n=s.byCat[c].length,q=pct(n,s.hum.length);return n?`<div style="flex:${n};background:${col(c)}" title="${c}: ${n} (${q}%)">${q>=6?q+'%':''}</div>`:''}).join('')}</div></div>`});
+  h+=`</div><h3>Year by year</h3><div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
+  S.forEach(s=>{const t=tally(s.all,r=>r.costume)[0];h+=`<tr><td>${s.y}</td><td>${s.all.length}</td><td>${s.uniq}</td><td>${e(t.name)}</td><td>${t.n}</td></tr>`});
+  h+=`</table></div>`;
+  const fr=tally(rows.filter(r=>cat(r)==='Movie / Show'),r=>r.franchise||r.costume).slice(0,10);
+  const co=tally(rows,r=>r.costume).slice(0,10);
+  h+=`<h3>All-time favorites</h3><div class="tw"><table><tr><th>Costume</th><th>Total</th></tr>${co.map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
+  h+=`<div class="tw"><table><tr><th>Movie, show or franchise</th><th>Total</th></tr>${fr.map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
+  document.getElementById('trends').innerHTML=h;
+}
+</script>
+</body>
+</html>
