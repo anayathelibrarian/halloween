@@ -26,14 +26,22 @@ h3{font-size:1.15rem;font-weight:500;margin:28px 0 8px;color:var(--mu)}
 button:focus-visible,summary:focus-visible{outline:3px solid #fff;outline-offset:2px}
 p{max-width:68ch}
 .chart{display:flex;flex-wrap:wrap;gap:28px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px}
-.chart svg{width:230px;height:230px;flex:none}
+.chart{justify-content:center}
+.chart svg{width:min(340px,100%);height:auto;flex:none}
 .leg{list-style:none;margin:0;padding:0;flex:1;min-width:240px}
 .leg li{display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid var(--line)}
 .leg i{width:12px;height:12px;border-radius:3px;flex:none}
 .leg b{margin-left:auto;font-variant-numeric:tabular-nums}
 .leg small{color:var(--mu);min-width:92px;text-align:right}
 details{border-bottom:1px solid var(--line)}
-summary{cursor:pointer;padding:12px 0;font-weight:500;display:flex;gap:10px;align-items:center}
+summary{cursor:pointer;padding:12px 0;font-weight:500;display:flex;gap:10px;align-items:center;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";flex:none;width:8px;height:8px;margin:0 6px 3px 2px;border-right:2px solid var(--mu);border-bottom:2px solid var(--mu);transform:rotate(-45deg);transition:transform .15s}
+details[open]>summary::before{transform:rotate(45deg)}
+summary:hover{color:var(--ac)}
+@media (prefers-reduced-motion:reduce){summary::before{transition:none}}
+.tag{display:inline-block;margin-left:8px;padding:0 8px;border:1px solid currentColor;border-radius:99px;font-size:.72rem;line-height:1.5;white-space:nowrap}
+.t-Inflatable{color:#4fc3d9}.t-Bedazzled{color:#e8618c}.t-RealPerson{color:#f2c14e}
 summary span{margin-left:auto;color:var(--mu);font-variant-numeric:tabular-nums}
 .tw{overflow-x:auto}
 table{border-collapse:collapse;width:100%;margin:0 0 16px;font-size:.95rem}
@@ -47,6 +55,7 @@ td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}
 .keys{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--mu);margin-bottom:8px}
 .keys i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
 .err{background:#4a1d2a;padding:16px;border-radius:8px}
+.note{color:var(--mu);font-size:.9rem}
 footer{margin-top:60px;color:var(--mu)}
 </style>
 </head>
@@ -86,43 +95,48 @@ function stats(y){
   const byCat={};CATS.forEach(c=>byCat[c]=hum.filter(r=>cat(r)===c));
   return{all,hum,dog,byCat,uniq:new Set(all.map(r=>r.costume)).size};
 }
-function donut(parts,total){
+function donut(parts,total,lab='Costume categories worn by humans'){
   const R=60,C=2*Math.PI*R;let off=0;
   const segs=parts.map(p=>{const l=p.n/total*C,s=`<circle r="${R}" cx="100" cy="100" fill="none" stroke="${col(p.c)}" stroke-width="40" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`;off+=l;return s}).join('');
-  return`<svg viewBox="0 0 200 200" role="img" aria-label="Costume categories worn by humans">${segs}<text x="100" y="106" text-anchor="middle" fill="#f1ebf7" font-family="Bricolage Grotesque,serif" font-weight="800" font-size="26">${total}</text></svg>`;
+  return`<svg viewBox="0 0 200 200" role="img" aria-label="${lab}">${segs}<text x="100" y="106" text-anchor="middle" fill="#f1ebf7" font-family="Bricolage Grotesque,serif" font-weight="800" font-size="26">${total}</text></svg>`;
 }
+const list=a=>a.length<2?(a[0]||''):a.slice(0,-1).join(', ')+(a.length>2?',':'')+' and '+a.at(-1);
+const agg=l=>{const m=new Map();l.forEach(r=>{const k=[r.costume,r.category2,r.profession,r.franchise,r.category,r.pizazz].map(v=>(v||'').trim().toLowerCase()).join('|');const o=m.get(k)||{r,n:0};o.n++;m.set(k,o)});return[...m.values()]};
+const tag=k=>k?`<span class="tag t-${k.replace(' ','')}">${k}</span>`:'';
+const legend=(parts,total,prev,y,withN)=>`<ul class="leg">${parts.map(x=>`<li><i style="background:${col(x.c)}"></i>${x.c}<small>${prev&&prev.length?prev.filter(r=>cat(r)===x.c).length+' in '+(y-1):''}</small><b>${withN?x.n+' · ':''}${pct(x.n,total)}%</b></li>`).join('')}</ul>`;
 function show(y){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',+b.dataset.y===y));
   const s=stats(y),p=years.includes(y-1)?stats(y-1):null,top=tally(s.all,r=>r.costume)[0];
   const parts=CATS.map(c=>({c,n:s.byCat[c].length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
-  const infl=s.all.filter(r=>r.pizazz==='Inflatable').length;
-  const delta=c=>{if(!p)return'';const d=pct(s.byCat[c].length,s.hum.length)-pct(p.byCat[c].length,p.hum.length);return d?`${d>0?'up':'down'} ${Math.abs(d)} pt${Math.abs(d)>1?'s':''}`:'same'};
-  let h=`<h2>${y}</h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume was ${e(top.name.toLowerCase())}, with ${top.n} trick or treaters.${infl?` ${infl} wore inflatable costumes.`:''}</p>`;
-  h+=`<h3>Human trick or treaters</h3><p>${s.hum.length} of ${s.all.length} trick or treaters were humans, including children and adults.</p>`;
-  h+=`<div class="chart">${donut(parts,s.hum.length)}<ul class="leg">${parts.map(x=>`<li><i style="background:${col(x.c)}"></i>${x.c}<small>${p?delta(x.c)+' vs '+(y-1):''}</small><b>${x.n} · ${pct(x.n,s.hum.length)}%</b></li>`).join('')}</ul></div>`;
-  h+=`<h3>Costumes by category</h3>`;
+  const cnt=k=>s.all.filter(r=>r.pizazz===k).length,infl=cnt('Inflatable'),bed=cnt('Bedazzled'),real=cnt('Real Person');
+  const ex=[infl&&`${infl} inflatable`,bed&&`${bed} bedazzled`,real&&`${real} based on real people`].filter(Boolean);
+  let h=`<h2>${y}</h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume was ${e(top.name.toLowerCase())}, with ${top.n} trick or treaters.${ex.length?` Of the costumes, ${list(ex)}.`:''}</p>`;
+  h+=`<h3>Human trick or treaters by category</h3><p>${s.hum.length} of ${s.all.length} trick or treaters were humans, including children and adults.</p>`;
+  h+=`<div class="chart">${donut(parts,s.hum.length)}${legend(parts,s.hum.length)}</div><p class="note" style="margin:24px 0 4px">Select a category to see every costume in it.</p><div>`;
   parts.forEach(x=>{
-    const list=s.byCat[x.c];let body;
-    if(x.c==='Movie / Show'){
-      const g=tally(list,r=>r.franchise||r.costume);
-      body=`<tr><th>Movie, show or franchise</th><th>Costumes</th><th>Count</th></tr>`+g.map(f=>{
-        const inner=list.filter(r=>(r.franchise||r.costume).trim().toLowerCase()===f.name.toLowerCase());
-        const cs=tally(inner,r=>r.costume).map(c=>c.n>1?`${e(c.name)} (${c.n})`:e(c.name)).join(', ');
-        return`<tr><td>${e(f.name)}</td><td>${cs}</td><td>${f.n}</td></tr>`}).join('');
-    }else body=`<tr><th>Costume</th><th>Count</th></tr>`+tally(list,r=>r.costume).map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('');
-    h+=`<details><summary><i style="width:12px;height:12px;border-radius:3px;background:${col(x.c)}"></i>${x.c}<span>${x.n} · ${pct(x.n,s.hum.length)}%</span></summary><div class="tw"><table>${body}</table></div></details>`;
+    const d=p?pct(x.n,s.hum.length)-pct(p.byCat[x.c].length,p.hum.length):0;
+    const ch=p?(d?`${d>0?'up':'down'} ${Math.abs(d)} pt${Math.abs(d)>1?'s':''} vs ${y-1}`:`same as ${y-1}`):'';
+    const rows_=agg(s.byCat[x.c]).sort(x.c==='Movie / Show'?(a,b)=>(a.r.franchise||a.r.costume).localeCompare(b.r.franchise||b.r.costume)||a.r.costume.localeCompare(b.r.costume):(a,b)=>b.n-a.n||a.r.costume.localeCompare(b.r.costume));
+    const body=`<tr><th>Costume</th><th>Category</th><th>Subcategories</th><th>Media property</th><th>Count</th></tr>`+rows_.map(({r,n})=>`<tr><td>${e(r.costume)}${tag(r.pizazz)}</td><td>${e(r.category)}</td><td>${e([r.category2,r.profession].filter(Boolean).join(', '))}</td><td>${e(r.franchise)}</td><td>${n}</td></tr>`).join('');
+    h+=`<details><summary><i style="width:12px;height:12px;border-radius:3px;background:${col(x.c)}"></i>${x.c}<span>${x.n}${ch?' · '+ch:''}</span></summary><div class="tw"><table>${body}</table></div></details>`;
   });
+  h+=`</div>`;
   if(s.dog.length){
-    const dc=CATS.map(c=>({c,n:s.dog.filter(r=>cat(r)===c).length})).filter(x=>x.n);
-    h+=`<h3>Dog trick or treaters</h3><p>${s.dog.length} of ${s.all.length} trick or treaters were dogs. Dog costumes were ${dc.map(x=>pct(x.n,s.dog.length)+'% '+x.c.toLowerCase()).join(', ')}.</p><div class="tw"><table><tr><th>Category</th><th>Costume</th><th>Count</th></tr>${s.dog.map(r=>`<tr><td>${cat(r)}</td><td>${e(r.costume)}</td><td>1</td></tr>`).join('')}</table></div>`;
+    const dp=CATS.map(c=>({c,n:s.dog.filter(r=>cat(r)===c).length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
+    h+=`<h3>Dog trick or treaters by category</h3><p>${s.dog.length} of ${s.all.length} trick or treaters were dogs.</p><div class="chart">${donut(dp,s.dog.length,'Costume categories worn by dogs')}${legend(dp,s.dog.length,p&&p.dog,y,true)}</div><div class="tw" style="margin-top:16px"><table><tr><th>Category</th><th>Costume</th><th>Media property</th><th>Count</th></tr>${agg(s.dog).map(({r,n})=>`<tr><td>${e(r.category)}</td><td>${e(r.costume)}${tag(r.pizazz)}</td><td>${e(r.franchise)}</td><td>${n}</td></tr>`).join('')}</table></div>`;
   }
   document.getElementById('year').innerHTML=h;
+}
+function dogBars(S){
+  const D=S.filter(s=>s.dog.length);if(!D.length)return'';
+  const used=CATS.filter(c=>D.some(s=>s.dog.some(r=>cat(r)===c)));
+  return`<h3>Dog costumes by category over time</h3><div class="keys">${used.map(c=>`<span><i style="background:${col(c)}"></i>${c}</span>`).join('')}</div><div class="bars">${D.map(s=>`<div class="row"><b>${s.y}</b><div class="bar">${used.map(c=>{const n=s.dog.filter(r=>cat(r)===c).length;return n?`<div style="flex:${n};background:${col(c)}" title="${c}: ${n}">${n}</div>`:''}).join('')}</div></div>`).join('')}</div><p class="note">Numbers show how many dogs wore each category. Each year has only a few dogs, so the shares swing a lot.</p>`;
 }
 function trends(){
   const S=years.map(y=>({y,...stats(y)}));
   let h=`<h2>Trends, ${years[0]}–${years[years.length-1]}</h2><h3>Share of human costumes by category</h3><div class="keys">${CATS.map(c=>`<span><i style="background:${col(c)}"></i>${c}</span>`).join('')}</div><div class="bars">`;
   S.forEach(s=>{h+=`<div class="row"><b>${s.y}</b><div class="bar">${CATS.map(c=>{const n=s.byCat[c].length,q=pct(n,s.hum.length);return n?`<div style="flex:${n};background:${col(c)}" title="${c}: ${n} (${q}%)">${q>=6?q+'%':''}</div>`:''}).join('')}</div></div>`});
-  h+=`</div><h3>Year by year</h3><div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
+  h+=`</div>${dogBars(S)}<h3>Year by year</h3><div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
   S.forEach(s=>{const t=tally(s.all,r=>r.costume)[0];h+=`<tr><td>${s.y}</td><td>${s.all.length}</td><td>${s.uniq}</td><td>${e(t.name)}</td><td>${t.n}</td></tr>`});
   h+=`</table></div>`;
   const fr=tally(rows.filter(r=>cat(r)==='Movie / Show'),r=>r.franchise||r.costume).slice(0,10);
