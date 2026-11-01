@@ -113,11 +113,11 @@ const tag=k=>k?`<span class="tag t-${k.replace(' ','')}">${k}</span>`:'';
 const legend=(parts,total,prev,y,withN)=>`<ul class="leg">${parts.map(x=>`<li><i style="background:${col(x.c)}"></i>${x.c}<small>${prev&&prev.length?prev.filter(r=>cat(r)===x.c).length+' in '+(y-1):''}</small><b>${withN?x.n+' · ':''}${pct(x.n,total)}%</b></li>`).join('')}</ul>`;
 function show(y){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',+b.dataset.y===y));
-  const s=stats(y),p=years.includes(y-1)?stats(y-1):null,top=tally(s.all,bkey)[0];
+  const s=stats(y),p=years.includes(y-1)?stats(y-1):null,T=tally(s.all,bkey),tops=T.filter(x=>x.n===T[0].n),top=T[0];
   const parts=CATS.map(c=>({c,n:s.byCat[c].length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
   const cnt=k=>s.all.filter(r=>r.pizazz===k).length,infl=cnt('Inflatable'),bed=cnt('Bedazzled'),real=cnt('Real Person');
   const ex=[[infl,'inflatable'],[bed,'bedazzled'],[real,'based on real people']].filter(x=>x[0]).map((x,i)=>i?`${x[0]} ${x[1]}`:`${x[0]} ${x[0]>1?'were':'was'} ${x[1]}`);
-  let h=`<h2>${y}</h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume was ${e(top.name.toLowerCase())}, with ${top.n} trick or treaters.${ex.length?` Of the costumes, ${list(ex)}.`:''}</p>`;
+  let h=`<h2>${y}</h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume${tops.length>1?'s were':' was'} ${e(list(tops.map(x=>x.name.toLowerCase())))}, with ${top.n} trick or treaters${tops.length>1?' each':''}.${ex.length?` Of the costumes, ${list(ex)}.`:''}</p>`;
   h+=`<h3>Human trick or treaters by category</h3><p>${s.hum.length} of ${s.all.length} trick or treaters were humans, including children and adults.</p>`;
   h+=`<div class="chart">${donut(parts,s.hum.length)}${legend(parts,s.hum.length)}</div><p class="note" style="margin:24px 0 4px">Select a category to see every costume in it.</p><div>`;
   parts.forEach(x=>{
@@ -164,7 +164,7 @@ function trends(){
   let h=`<h2>Trends, ${years[0]}–${years[years.length-1]}</h2><h3>Share of human costumes by category</h3><div class="keys">${CATS.map(c=>`<span><i style="background:${col(c)}"></i>${c}</span>`).join('')}</div><div class="bars">`;
   S.forEach(s=>{h+=`<div class="row"><b>${s.y}</b><div class="bar">${CATS.map(c=>{const n=s.byCat[c].length,q=pct(n,s.hum.length);return n?`<div style="flex:${n};background:${col(c)}" title="${c}: ${n} (${q}%)">${q>=6?q+'%':''}</div>`:''}).join('')}</div></div>`});
   h+=`</div>${dogBars(S)}<h3>Year by year</h3><div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
-  S.forEach(s=>{const t=tally(s.all,bkey)[0];h+=`<tr><td>${s.y}</td><td>${s.all.length}</td><td>${s.uniq}</td><td>${e(t.name)}</td><td>${t.n}</td></tr>`});
+  S.forEach(s=>{const T=tally(s.all,bkey),t=T.filter(x=>x.n===T[0].n);h+=`<tr><td>${s.y}</td><td>${s.all.length}</td><td>${s.uniq}</td><td>${e(t.map(x=>x.name).join(', '))}</td><td>${t[0].n}</td></tr>`});
   h+=`</table></div>`;
   const fr=tally(rows.filter(r=>cat(r)==='Movie / Show'),r=>r.franchise||r.costume).slice(0,10);
   const co=tally(rows,bkey).slice(0,10);
