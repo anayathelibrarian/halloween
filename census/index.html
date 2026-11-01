@@ -22,8 +22,8 @@ h3{font-size:1.15rem;font-weight:500;margin:28px 0 8px;color:var(--mu)}
 .sub{color:var(--mu);margin:8px 0 28px;max-width:60ch}
 .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
 .tabs button{font:500 1rem var(--bd);color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 18px;cursor:pointer}
-.tabs button[aria-selected=true]{background:var(--ac);color:#1a0f05;border-color:var(--ac);font-weight:700}
-button:focus-visible,summary:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.tabs button[aria-pressed=true]{background:var(--ac);color:#1a0f05;border-color:var(--ac);font-weight:700}
+a:focus-visible,button:focus-visible,summary:focus-visible,.tw:focus-visible{outline:3px solid #fff;outline-offset:2px}
 p{max-width:68ch}
 .chart{display:flex;flex-wrap:wrap;gap:28px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px}
 .chart{justify-content:center}
@@ -56,6 +56,8 @@ td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}
 .bars{display:grid;gap:10px;margin:16px 0}
 .row{display:grid;grid-template-columns:48px 1fr;gap:10px;align-items:center}
 .bar{display:flex;height:34px;border-radius:6px;overflow:hidden}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pk{text-decoration:underline}
 .bar div{font-size:.75rem;color:#120c1a;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden}
 .keys{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--mu);margin-bottom:8px}
 .keys i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
@@ -68,16 +70,32 @@ footer{margin-top:60px;color:var(--mu)}
 <main>
 <nav class="back"><a href="../">Halloween</a> · <a href="https://anayathelibrarian.github.io/">Stitches, Stories, and Spreadsheets</a></nav>
 <h1>Halloween Census: Westside Drive</h1>
-<p class="sub">Every trick or treater’s costume at our door, counted since 2022.</p>
-<div class="tabs" id="tabs" role="tablist" aria-label="Year"></div>
-<section id="year" aria-live="polite"></section>
-<section id="trends"></section>
+<p class="sub">Every trick or treater’s costume at our door, counted since 2022. We do our best to represent costumes faithfully, but in the frenzy for candy some details may be missed.</p>
+<div class="tabs" id="tabs" role="group" aria-label="Choose a year"></div>
+<p id="status" class="sr" role="status"></p>
+<section id="year" aria-labelledby="yh"></section>
+<section id="trends" aria-labelledby="th"></section>
 <footer>Happy Halloween!</footer>
 </main>
 <script>
 const CATS=['Movie / Show','Critter','Profession','SuperMythical','Video Game','Food','Popculture','Mundane','Other'];
 const NOTE={SuperMythical:'This category includes supernatural and mythological costumes, and everything that could be considered both.'};
-const COL=['#ff7a1a','#f2c14e','#7bc96f','#9b7cf0','#4fc3d9','#e8618c','#3f8ef0','#b0a7bf','#6b6179'];
+const COL=['#ff7a1a','#f2c14e','#7bc96f','#9b7cf0','#4fc3d9','#e8618c','#3f8ef0','#b0a7bf','#8a7f99'];
+const ink=h=>{const n=parseInt(h.slice(1),16),f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4},L=.2126*f(n>>16)+.7152*f(n>>8&255)+.0722*f(n&255);return L>.18?'#120c1a':'#ffffff'};
+const keys=cs=>cs.map(c=>`<span><i style="background:${col(c)}"></i>${c}</span>`).join('');
+const bar=(y,items,total,cnt)=>{const it=items.filter(x=>x[1]);const desc=it.map(([c,n])=>`${c} ${n}${cnt?'':' ('+pct(n,total)+'%)'}`).join(', ');return`<div class="row"><b>${y}</b><div class="bar" role="img" aria-label="${y}: ${desc}">${it.map(([c,n])=>{const q=pct(n,total);const t=cnt?String(n):(q>=18?c+' ':'')+(q>=6?q+'%':'');return`<div aria-hidden="true" style="flex:${n};background:${col(c)};color:${ink(col(c))}" title="${c}: ${n} (${q}%)">${t}</div>`}).join('')}</div></div>`};
+const altTable=(L,cs,get,tot)=>`<details><summary>Show these numbers as a table</summary><div class="tw"><table class="fr"><tr><th>Category</th>${L.map(s=>`<th>${s.y}</th>`).join('')}</tr>${cs.map(c=>`<tr><td>${c}</td>${L.map(s=>{const n=get(s,c);return`<td>${n?`${n} (${pct(n,tot(s))}%)`:'–'}</td>`}).join('')}</tr>`).join('')}</table></div></details>`;
+function a11y(root){
+  root.querySelectorAll('table').forEach(t=>{
+    t.querySelectorAll('tr:first-child th').forEach(h=>h.scope='col');
+    t.querySelectorAll('tr:not(:first-child) th').forEach(h=>h.scope='row');
+    let l='';const d=t.closest('details');
+    if(d){const c=d.querySelector('summary').cloneNode(true);c.querySelectorAll('span,i').forEach(x=>x.remove());l=c.textContent.trim()}
+    else{let el=t.closest('.tw')||t;while((el=el.previousElementSibling)){if(/^H[1-6]$/.test(el.tagName)){l=el.textContent;break}}}
+    const w=t.closest('.tw');
+    if(w){w.tabIndex=0;w.setAttribute('role','group');w.setAttribute('aria-label',l||'Table')}else t.setAttribute('aria-label',l||'Table');
+  });
+}
 const col=c=>COL[CATS.indexOf(c)];
 let rows=[],years=[];
 const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -87,11 +105,11 @@ const pct=(n,t)=>t?Math.round(n/t*100):0;
 
 fetch('data.json').then(r=>r.json()).then(j=>{
   rows=j.rows.map(r=>Object.fromEntries(j.cols.map((c,i)=>[c,r[i]])));
-  years=[...new Set(rows.map(r=>r.year))].sort();
+  years=[...new Set(rows.map(r=>r.year))].sort();buildFR();
   const want=+location.hash.slice(1);
   const start=years.includes(want)?want:years[years.length-1];
   const t=document.getElementById('tabs');
-  t.innerHTML=[...years].reverse().map(y=>`<button role="tab" data-y="${y}">${y}</button>`).join('');
+  t.innerHTML=[...years].reverse().map(y=>`<button type="button" data-y="${y}">${y}</button>`).join('');
   t.onclick=ev=>{const y=+ev.target.dataset.y;if(y){location.hash=y;show(y)}};
   show(start);trends();
 }).catch(()=>{document.getElementById('year').innerHTML='<p class="err">Could not load data.json. If you opened this file directly from your computer, serve the folder instead (for example, run “python3 -m http.server” and open localhost:8000).</p>'});
@@ -101,25 +119,32 @@ function stats(y){
   const byCat={};CATS.forEach(c=>byCat[c]=hum.filter(r=>cat(r)===c));
   return{all,hum,dog,byCat,uniq:new Set(all.map(r=>r.costume)).size};
 }
-function donut(parts,total,lab='Costume categories worn by humans'){
-  const R=60,C=2*Math.PI*R;let off=0;
-  const segs=parts.map(p=>{const l=p.n/total*C,s=`<circle r="${R}" cx="100" cy="100" fill="none" stroke="${col(p.c)}" stroke-width="40" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`;off+=l;return s}).join('');
-  return`<svg viewBox="0 0 200 200" role="img" aria-label="${lab}">${segs}<text x="100" y="106" text-anchor="middle" fill="#f1ebf7" font-family="Bricolage Grotesque,serif" font-weight="800" font-size="26">${total}</text></svg>`;
+function donut(parts,total,ttl='Costume categories worn by humans'){
+  const R=60,C=2*Math.PI*R;let off=0,lbl='';
+  const segs=parts.map(p=>{const l=p.n/total*C,q=pct(p.n,total),a=(off+l/2)/C*2*Math.PI-Math.PI/2;
+    if(p.n/total>=.07)lbl+=`<text x="${(100+R*Math.cos(a)).toFixed(1)}" y="${(104+R*Math.sin(a)).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="${ink(col(p.c))}">${q}%</text>`;
+    const s=`<circle r="${R}" cx="100" cy="100" fill="none" stroke="${col(p.c)}" stroke-width="40" stroke-dasharray="${Math.max(l-1.5,.5)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"><title>${p.c}: ${p.n} (${q}%)</title></circle>`;off+=l;return s}).join('');
+  const desc=parts.map(p=>`${p.c} ${pct(p.n,total)}%`).join(', ');
+  return`<svg viewBox="0 0 200 200" role="img" aria-label="${ttl}, ${total} in total: ${desc}">${segs}${lbl}<text x="100" y="106" text-anchor="middle" fill="#f1ebf7" font-family="Bricolage Grotesque,serif" font-weight="800" font-size="26">${total}</text></svg>`;
 }
 const list=a=>a.length<2?(a[0]||''):a.slice(0,-1).join(', ')+(a.length>2?',':'')+' and '+a.at(-1);
 const agg=l=>{const m=new Map();l.forEach(r=>{const k=[r.costume,r.category2,r.profession,r.franchise,r.category,r.pizazz].map(v=>(v||'').trim().toLowerCase()).join('|');const o=m.get(k)||{r,n:0};o.n++;m.set(k,o)});return[...m.values()]};
 const bkey=r=>(r.base||String(r.costume).split(',')[0]).trim();
 const vlab=(r,b)=>{const c=r.costume.trim();if(c.toLowerCase()===b.toLowerCase())return'Plain';return !r.base&&c.includes(',')?c.slice(c.indexOf(',')+1).trim():c};
 const groups=l=>{const m=new Map();agg(l).forEach(a=>{const b=bkey(a.r),k=b.toLowerCase();const o=m.get(k)||{b,n:0,items:[]};o.n+=a.n;o.items.push(a);m.set(k,o)});m.forEach(g=>{g.items.sort((x,y)=>y.n-x.n||x.r.costume.localeCompare(y.r.costume));g.v=new Set(g.items.map(a=>a.r.costume.trim().toLowerCase())).size>1});return[...m.values()].sort((x,y)=>y.n-x.n||x.b.localeCompare(y.b))};
+let FR=new Map();
+const nmF=n=>n.replace(/^(.*), (The|A)$/,'$2 $1');
+function buildFR(){const m=new Map();rows.forEach(r=>{const k=bkey(r).toLowerCase();const o=m.get(k)||{n:0,f:new Map()};o.n++;if(r.franchise){const f=r.franchise.trim();o.f.set(f,(o.f.get(f)||0)+1)}m.set(k,o)});m.forEach((o,k)=>{const t=[...o.f.entries()].sort((a,b)=>b[1]-a[1])[0];FR.set(k,t&&t[1]/o.n>=0.5?t[0]:'')})}
+const lab=(n,lc)=>{const f=FR.get(n.trim().toLowerCase()),nm=f?nmF(f):'';return(lc?n.toLowerCase():n)+(nm&&nm.toLowerCase()!==n.trim().toLowerCase()?` (${nm})`:'')};
 const tag=k=>k?`<span class="tag t-${k.replace(' ','')}">${k}</span>`:'';
 const legend=(parts,total,prev,y,withN)=>`<ul class="leg">${parts.map(x=>`<li><i style="background:${col(x.c)}"></i>${x.c}<small>${prev&&prev.length?prev.filter(r=>cat(r)===x.c).length+' in '+(y-1):''}</small><b>${withN?x.n+' · ':''}${pct(x.n,total)}%</b></li>`).join('')}</ul>`;
 function show(y){
-  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',+b.dataset.y===y));
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.y===y));
   const s=stats(y),p=years.includes(y-1)?stats(y-1):null,T=tally(s.all,bkey),tops=T.filter(x=>x.n===T[0].n),top=T[0];
   const parts=CATS.map(c=>({c,n:s.byCat[c].length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
   const cnt=k=>s.all.filter(r=>r.pizazz===k).length,infl=cnt('Inflatable'),bed=cnt('Bedazzled'),real=cnt('Real Person');
   const ex=[[infl,'inflatable'],[bed,'bedazzled'],[real,'based on real people']].filter(x=>x[0]).map((x,i)=>i?`${x[0]} ${x[1]}`:`${x[0]} ${x[0]>1?'were':'was'} ${x[1]}`);
-  let h=`<h2>${y}</h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume${tops.length>1?'s were':' was'} ${e(list(tops.map(x=>x.name.toLowerCase())))}, with ${top.n} trick or treaters${tops.length>1?' each':''}.${ex.length?` Of the costumes, ${list(ex)}.`:''}</p>`;
+  let h=`<h2 id="yh">${y}<span class="sr"> results</span></h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume${tops.length>1?'s were':' was'} ${e(list(tops.map(x=>lab(x.name,1))))}, with ${top.n} trick or treaters${tops.length>1?' each':''}.${ex.length?` Of the costumes, ${list(ex)}.`:''}</p>`;
   h+=`<h3>Human trick or treaters by category</h3><p>${s.hum.length} of ${s.all.length} trick or treaters were humans, including children and adults.</p>`;
   h+=`<div class="chart">${donut(parts,s.hum.length)}${legend(parts,s.hum.length)}</div><p class="note" style="margin:24px 0 4px">Select a category to see every costume in it.</p><div>`;
   parts.forEach(x=>{
@@ -143,12 +168,12 @@ function show(y){
     const dp=CATS.map(c=>({c,n:s.dog.filter(r=>cat(r)===c).length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
     h+=`<h3>Dog trick or treaters by category</h3><p>${s.dog.length} of ${s.all.length} trick or treaters were dogs.</p><div class="chart">${donut(dp,s.dog.length,'Costume categories worn by dogs')}${legend(dp,s.dog.length,p&&p.dog,y,true)}</div><div class="tw" style="margin-top:16px"><table><tr><th>Category</th><th>Costume</th><th>Count</th></tr>${agg(s.dog).map(({r,n})=>`<tr><td>${e(r.category)}</td><td>${e(r.costume)}${tag(r.pizazz)}</td><td>${n}</td></tr>`).join('')}</table></div>`;
   }
-  document.getElementById('year').innerHTML=h;
+  document.getElementById('year').innerHTML=h;a11y(document.getElementById('year'));document.getElementById('status').textContent='Showing results for '+y+'.';
 }
 function dogBars(S){
   const D=S.filter(s=>s.dog.length);if(!D.length)return'';
-  const used=CATS.filter(c=>D.some(s=>s.dog.some(r=>cat(r)===c)));
-  return`<h3>Dog costumes by category over time</h3><div class="keys">${used.map(c=>`<span><i style="background:${col(c)}"></i>${c}</span>`).join('')}</div><div class="bars">${D.map(s=>`<div class="row"><b>${s.y}</b><div class="bar">${used.map(c=>{const n=s.dog.filter(r=>cat(r)===c).length;return n?`<div style="flex:${n};background:${col(c)}" title="${c}: ${n}">${n}</div>`:''}).join('')}</div></div>`).join('')}</div><p class="note">Numbers show how many dogs wore each category. Each year has only a few dogs, so the shares swing a lot.</p>`;
+  const used=CATS.filter(c=>D.some(s=>s.dog.some(r=>cat(r)===c))),get=(s,c)=>s.dog.filter(r=>cat(r)===c).length;
+  return`<h3>Dog costumes by category over time</h3><div class="keys">${keys(used)}</div><div class="bars">${D.map(s=>bar(s.y,used.map(c=>[c,get(s,c)]),s.dog.length,1)).join('')}</div><p class="note">Numbers show how many dogs wore each category. Each year has only a few dogs, so the shares swing a lot.</p>`+altTable(D,used,get,s=>s.dog.length);
 }
 const FMIN=7,CMIN=5;
 function stay(keyf,minN){
@@ -158,10 +183,10 @@ function stay(keyf,minN){
 }
 function staying(){
   const nm=n=>n.replace(/^(.*), (The|A)$/,'$2 $1'),need=Math.ceil(years.length*0.8);
-  const tbl=l=>`<div class="tw"><table class="fr"><tr><th>Name</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>${l.map(o=>`<tr><td>${e(nm(o.name))}</td>${years.map(y=>{const v=o.by[y]||0;return`<td${o.kind&&o.kind!=='end'&&v===o.peak?' style="color:var(--ac);font-weight:700"':''}>${v||'–'}</td>`}).join('')}<td>${o.n}</td></tr>`).join('')}</table></div>`;
+  const tbl=l=>`<div class="tw"><table class="fr"><tr><th>Name</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>${l.map(o=>`<tr><td>${e(lab(o.name))}</td>${years.map(y=>{const v=o.by[y]||0;return o.kind&&o.kind!=='end'&&v===o.peak?`<td class="pk" style="color:var(--ac);font-weight:700" title="Peak year">${v}<span class="sr"> (peak year)</span></td>`:`<td>${v||'–'}</td>`}).join('')}<td>${o.n}</td></tr>`).join('')}</table></div>`;
   const det=(t,l)=>l.length?`<details open><summary>${t}<span>${l.length}</span></summary>${tbl(l)}</details>`:'';
-  const F=stay(r=>r.franchise,FMIN),C=stay(bkey,CMIN),pk=(L,k)=>L.filter(o=>o.kind===k);
-  return`<h3>Staying power</h3><p class="note">Enduring means seen in at least ${need} of the ${years.length} years. Short-lived means 70% or more of the costumes came in a single year, which is highlighted. New means that most of the costumes came in the latest year, so it is too early to tell. Only franchises with ${FMIN} or more costumes and costumes seen ${CMIN} or more times are included.</p>`+det('Enduring franchises',pk(F,'end'))+det('Short-lived franchises',pk(F,'short'))+det('New franchises',pk(F,'new'))+det('Enduring costumes',pk(C,'end'))+det('Short-lived costumes',pk(C,'short'))+det('New costumes',pk(C,'new'));
+  const C=stay(bkey,CMIN),pk=(L,k)=>L.filter(o=>o.kind===k);
+  return`<h3>Staying power</h3><p class="note">Enduring means seen in at least ${need} of the ${years.length} years. Short-lived means 70% or more of the costumes came in a single year, which is highlighted and underlined. New means that most of the costumes came in the latest year, so it is too early to tell. Only costumes seen ${CMIN} or more times are included. Franchises with ${FMIN} or more costumes carry the same labels in the list below.</p>`+det('Enduring costumes',pk(C,'end'))+det('Short-lived costumes',pk(C,'short'))+det('New costumes',pk(C,'new'));
 }
 function franchises(){
   const m=new Map();
@@ -178,16 +203,16 @@ function franchises(){
 }
 function trends(){
   const S=years.map(y=>({y,...stats(y)}));
-  let h=`<h2>Trends, ${years[0]}–${years[years.length-1]}</h2><h3>Share of human costumes by category</h3><div class="keys">${CATS.map(c=>`<span><i style="background:${col(c)}"></i>${c}</span>`).join('')}</div><div class="bars">`;
-  S.forEach(s=>{h+=`<div class="row"><b>${s.y}</b><div class="bar">${CATS.map(c=>{const n=s.byCat[c].length,q=pct(n,s.hum.length);return n?`<div style="flex:${n};background:${col(c)}" title="${c}: ${n} (${q}%)">${q>=6?q+'%':''}</div>`:''}).join('')}</div></div>`});
-  h+=`</div>${dogBars(S)}<h3>Year by year</h3><div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
-  S.forEach(s=>{const T=tally(s.all,bkey),t=T.filter(x=>x.n===T[0].n);h+=`<tr><td>${s.y}</td><td>${s.all.length}</td><td>${s.uniq}</td><td>${e(t.map(x=>x.name).join(', '))}</td><td>${t[0].n}</td></tr>`});
+  let h=`<h2 id="th">Trends, ${years[0]}–${years[years.length-1]}</h2><h3>Share of human costumes by category</h3><div class="keys">${keys(CATS)}</div><div class="bars">`;
+  h+=S.map(s=>bar(s.y,CATS.map(c=>[c,s.byCat[c].length]),s.hum.length,0)).join('');
+  h+=`</div>${altTable(S,CATS.filter(c=>S.some(s=>s.byCat[c].length)),(s,c)=>s.byCat[c].length,s=>s.hum.length)}${dogBars(S)}<h3>Year by year</h3><div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
+  S.forEach(s=>{const T=tally(s.all,bkey),t=T.filter(x=>x.n===T[0].n);h+=`<tr><td>${s.y}</td><td>${s.all.length}</td><td>${s.uniq}</td><td>${e(t.map(x=>lab(x.name)).join(', '))}</td><td>${t[0].n}</td></tr>`});
   h+=`</table></div>`;
   const fr=tally(rows.filter(r=>cat(r)==='Movie / Show'),r=>r.franchise||r.costume).slice(0,10);
   const co=tally(rows,bkey).slice(0,10);
-  h+=`<h3>All-time favorites</h3><div class="tw"><table><tr><th>Costume</th><th>Total</th></tr>${co.map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
+  h+=`<h3>All-time favorites</h3><div class="tw"><table><tr><th>Costume</th><th>Total</th></tr>${co.map(c=>`<tr><td>${e(lab(c.name))}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
   h+=`<div class="tw"><table><tr><th>Movie, show or franchise</th><th>Total</th></tr>${fr.map(c=>`<tr><td>${e(c.name)}</td><td>${c.n}</td></tr>`).join('')}</table></div>`;
-  h+=staying()+franchises();document.getElementById('trends').innerHTML=h;
+  h+=staying()+franchises();document.getElementById('trends').innerHTML=h;a11y(document.getElementById('trends'));
 }
 </script>
 </body>
