@@ -125,7 +125,8 @@ function show(y){
         return`<tr><td>${e(f.name)}</td><td>${inner.map(({r,n})=>e(r.costume)+(n>1?` (${n})`:'')+tag(r.pizazz)).join('<br>')}</td><td>${f.n}</td></tr>`}).join('');
     }else{
       const oth=x.c==='Other',l2=agg(s.byCat[x.c]).sort((a,b)=>b.n-a.n||a.r.costume.localeCompare(b.r.costume));
-      body=`<tr><th>Costume</th>${oth?'<th>Category</th>':''}<th>Subcategories</th><th>Media property</th><th>Count</th></tr>`+l2.map(({r,n})=>`<tr><td>${e(r.costume)}${tag(r.pizazz)}</td>${oth?`<td>${e(r.category)}</td>`:''}<td>${e([r.category2,r.profession].filter(Boolean).join(', '))}</td><td>${e(r.franchise)}</td><td>${n}</td></tr>`).join('');
+      const hf=l2.some(({r})=>r.franchise),hs=l2.some(({r})=>r.category2||r.profession);
+      body=`<tr><th>Costume</th>${oth?'<th>Category</th>':''}${hs?'<th>Subcategories</th>':''}${hf?'<th>Media property</th>':''}<th>Count</th></tr>`+l2.map(({r,n})=>`<tr><td>${e(r.costume)}${tag(r.pizazz)}</td>${oth?`<td>${e(r.category)}</td>`:''}${hs?`<td>${e([r.category2,r.profession].filter(Boolean).join(', '))}</td>`:''}${hf?`<td>${e(r.franchise)}</td>`:''}<td>${n}</td></tr>`).join('');
     }
     h+=`<details><summary><i style="width:12px;height:12px;border-radius:3px;background:${col(x.c)}"></i>${x.c}<span>${x.n}${ch?' · '+ch:''}</span></summary><div class="tw"><table>${body}</table></div></details>`;
   });
