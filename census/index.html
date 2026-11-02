@@ -44,6 +44,7 @@ summary:hover{color:var(--ac)}
 .v td:first-child{padding-left:28px;color:var(--mu)}
 .sp td:nth-child(2),.sp th:nth-child(2){text-align:left}
 .sp .tag{margin-left:0}
+.tc svg{width:100%;max-width:640px}
 .t-End{color:#7bc96f}.t-Short{color:#f2a14e}.t-New{color:#4fc3d9}
 .tag{display:inline-block;margin-left:8px;padding:0 8px;border:1px solid currentColor;border-radius:99px;font-size:.72rem;line-height:1.5;white-space:nowrap}
 .t-Inflatable{color:#4fc3d9}.t-Bedazzled{color:#e8618c}.t-RealPerson{color:#f2c14e}
@@ -149,7 +150,7 @@ function show(y){
   const cnt=k=>s.all.filter(r=>r.pizazz===k).length,infl=cnt('Inflatable'),bed=cnt('Bedazzled'),real=cnt('Real Person');
   const ex=[[infl,'inflatable'],[bed,'bedazzled'],[real,'based on real people']].filter(x=>x[0]).map((x,i)=>i?`${x[0]} ${x[1]}`:`${x[0]} ${x[0]>1?'were':'was'} ${x[1]}`);
   let h=`<h2 id="yh">${y}<span class="sr"> results</span></h2><p>We had ${s.all.length} trick or treaters wearing ${s.uniq} unique costumes. The most popular costume${tops.length>1?'s were':' was'} ${e(list(tops.map(x=>lab(x.name,1))))}, with ${top.n} trick or treaters${tops.length>1?' each':''}.${ex.length?` Of the costumes, ${list(ex)}.`:''}</p>`;
-  h+=`<h3>Human trick or treaters by category</h3><p>${s.hum.length} of ${s.all.length} trick or treaters were humans, including children and adults.</p>`;
+  h+=`<h3>Humans</h3><p>${s.hum.length} of ${s.all.length} trick or treaters were humans, including children and adults.</p>`;
   h+=`<div class="chart">${donut(parts,s.hum.length)}${legend(parts,s.hum.length)}</div><p class="note" style="margin:24px 0 4px">Select a category to see every costume in it.</p><div>`;
   parts.forEach(x=>{
     const d=p?pct(x.n,s.hum.length)-pct(p.byCat[x.c].length,p.hum.length):0;
@@ -170,14 +171,14 @@ function show(y){
   h+=`</div>`;
   if(s.dog.length){
     const dp=CATS.map(c=>({c,n:s.dog.filter(r=>cat(r)===c).length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
-    h+=`<h3>Dog trick or treaters by category</h3><p>${s.dog.length} of ${s.all.length} trick or treaters were dogs.</p><div class="chart">${donut(dp,s.dog.length,'Costume categories worn by dogs')}${legend(dp,s.dog.length,p&&p.dog,y,true)}</div><div class="tw" style="margin-top:16px"><table><tr><th>Category</th><th>Costume</th><th>Count</th></tr>${agg(s.dog).map(({r,n})=>`<tr><td>${e(r.category)}</td><td>${e(r.costume)}${tag(r.pizazz)}</td><td>${n}</td></tr>`).join('')}</table></div>`;
+    h+=`<h3>Dogs</h3><p>${s.dog.length} of ${s.all.length} trick or treaters were dogs.</p><div class="chart">${donut(dp,s.dog.length,'Costume categories worn by dogs')}${legend(dp,s.dog.length,p&&p.dog,y,true)}</div><div class="tw" style="margin-top:16px"><table><tr><th>Category</th><th>Costume</th><th>Count</th></tr>${agg(s.dog).map(({r,n})=>`<tr><td>${e(r.category)}</td><td>${e(r.costume)}${tag(r.pizazz)}</td><td>${n}</td></tr>`).join('')}</table></div>`;
   }
   document.getElementById('year').innerHTML=h;a11y(document.getElementById('year'));document.getElementById('status').textContent='Showing results for '+y+'.';
 }
 function dogBars(S){
   const D=S.filter(s=>s.dog.length);if(!D.length)return'';
   const used=CATS.filter(c=>D.some(s=>s.dog.some(r=>cat(r)===c))),get=(s,c)=>s.dog.filter(r=>cat(r)===c).length;
-  return`<h3>Dog costumes by category over time</h3><div class="keys">${keys(used)}</div><div class="bars">${D.map(s=>bar(s.y,used.map(c=>[c,get(s,c)]),s.dog.length,1)).join('')}</div><p class="note">Numbers show how many dogs wore each category. Each year has only a few dogs, so the shares swing a lot.</p>`+altTable(D,used,get,s=>s.dog.length);
+  return`<h3>Compare category popularity by year: Dogs</h3><div class="keys">${keys(used)}</div><div class="bars">${D.map(s=>bar(s.y,used.map(c=>[c,get(s,c)]),s.dog.length,1)).join('')}</div><p class="note">Numbers show how many dogs wore each category. Each year has only a few dogs, so the shares swing a lot.</p>`+altTable(D,used,get,s=>s.dog.length);
 }
 const FMIN=7,CMIN=5;
 function stay(keyf,minN){
@@ -188,7 +189,7 @@ function stay(keyf,minN){
 function staying(){
   const need=Math.ceil(years.length*0.8),C=stay(bkey,CMIN).filter(o=>o.kind);
   const row=o=>`<tr><td>${e(lab(o.name))}</td><td>${bd(o.kind)}</td>${years.map(y=>{const v=o.by[y]||0;return o.kind!=='end'&&v===o.peak?`<td class="pk" style="color:var(--ac);font-weight:700" title="Peak year">${v}<span class="sr"> (peak year)</span></td>`:`<td>${v||'–'}</td>`}).join('')}<td>${o.n}</td></tr>`;
-  return`<h3>Staying power</h3><p class="note">Enduring means seen in at least ${need} of the ${years.length} years. Short-lived means 70% or more of the costumes came in a single year, which is highlighted and underlined. New means that most of the costumes came in the latest year, so it is too early to tell. Only costumes seen ${CMIN} or more times are included. Franchises with ${FMIN} or more costumes carry the same labels in the list below.</p><div class="tw"><table class="fr sp"><tr><th>Costume</th><th>Pattern</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>${C.map(row).join('')}</table></div>`;
+  return`<h3>Popular costumes over time</h3><p class="note">Enduring means seen in at least ${need} of the ${years.length} years. Short-lived means 70% or more of the costumes came in a single year, which is highlighted and underlined. New means that most of the costumes came in the latest year, so it is too early to tell. Only costumes seen ${CMIN} or more times are included. Franchises with ${FMIN} or more costumes carry the same labels in the list below.</p><div class="tw"><table class="fr sp"><tr><th>Costume</th><th>Pattern</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>${C.map(row).join('')}</table></div>`;
 }
 function franchises(){
   const m=new Map();
@@ -202,11 +203,18 @@ function franchises(){
     const tot=y=>cs.reduce((t,c)=>t+(c.by[y]||0),0);
     return`<details><summary>${e(nm(f.name))}${bd(FS.get(f.name.trim().toLowerCase()))}<span>${f.n} total</span></summary><div class="tw"><table class="fr"><tr><th>Costume</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>${cs.map(c=>`<tr><td>${e(c.name)}</td>${years.map(y=>`<td>${cell(c.by[y])}</td>`).join('')}<td>${c.n}</td></tr>`).join('')}<tr><th>All ${e(nm(f.name))} costumes</th>${years.map(y=>`<th>${cell(tot(y))}</th>`).join('')}<th>${f.n}</th></tr></table></div></details>`}).join('');
 }
+function totalsChart(S){
+  const W=640,H=270,pl=44,pr=12,pt=26,pb=34,mx=Math.max(...S.map(s=>s.all.length)),step=[10,25,50,100,200,250,500,1000].find(v=>mx/v<=5),top=Math.ceil(mx/step)*step;
+  const bw=(W-pl-pr)/S.length,ph=H-pt-pb,Y=v=>H-pb-v/top*ph;
+  let g='';for(let v=0;v<=top;v+=step)g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#382d49"/><text x="${pl-8}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="#a79bb8">${v}</text>`;
+  const b=S.map((s,i)=>{const n=s.all.length,x=pl+i*bw+bw*.2,w=bw*.6;return`<rect x="${x.toFixed(1)}" y="${Y(n).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-pb-Y(n)).toFixed(1)}" rx="3" fill="#ff7a1a"><title>${s.y}: ${n} trick or treaters</title></rect><text x="${(x+w/2).toFixed(1)}" y="${(Y(n)-7).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#f1ebf7">${n}</text><text x="${(x+w/2).toFixed(1)}" y="${H-12}" text-anchor="middle" font-size="13" fill="#a79bb8">${s.y}</text>`}).join('');
+  return`<div class="chart tc"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Total trick or treaters by year: ${S.map(s=>s.y+' '+s.all.length).join(', ')}">${g}${b}</svg></div>`;
+}
 function trends(){
   const S=years.map(y=>({y,...stats(y)}));
-  let h=`<h2 id="th">Trends, ${years[0]}–${years[years.length-1]}</h2><h3>Share of human costumes by category</h3><div class="keys">${keys(CATS)}</div><div class="bars">`;
+  let h=`<h2 id="th">Trends</h2><h3>Compare category popularity by year: Humans</h3><div class="keys">${keys(CATS)}</div><div class="bars">`;
   h+=S.map(s=>bar(s.y,CATS.map(c=>[c,s.byCat[c].length]),s.hum.length,0)).join('');
-  h+=`</div>${altTable(S,CATS.filter(c=>S.some(s=>s.byCat[c].length)),(s,c)=>s.byCat[c].length,s=>s.hum.length)}${dogBars(S)}<h3>Year by year</h3><div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
+  h+=`</div>${altTable(S,CATS.filter(c=>S.some(s=>s.byCat[c].length)),(s,c)=>s.byCat[c].length,s=>s.hum.length)}${dogBars(S)}<h3>Yearly Totals</h3>${totalsChart(S)}<div class="tw"><table><tr><th>Year</th><th>Trick or treaters</th><th>Unique costumes</th><th>Most popular costume</th><th>Count</th></tr>`;
   S.forEach(s=>{const T=tally(s.all,bkey),t=T.filter(x=>x.n===T[0].n);h+=`<tr><td>${s.y}</td><td>${s.all.length}</td><td>${s.uniq}</td><td>${e(t.map(x=>lab(x.name)).join(', '))}</td><td>${t[0].n}</td></tr>`});
   h+=`</table></div>`;
   h+=staying()+franchises();document.getElementById('trends').innerHTML=h;a11y(document.getElementById('trends'));
