@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halloween Costume Photos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#17121f;--card:#221a2e;--line:#382d49;--tx:#f1ebf7;--mu:#a79bb8;--ac:#ff7a1a;color-scheme:dark;
+--hd:"Bricolage Grotesque",Georgia,serif;--bd:system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 var(--bd)}
+main{max-width:920px;margin:0 auto;padding:40px 20px 80px}
+h1,h2{font-family:var(--hd);line-height:1.15;margin:0}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;color:var(--ac);letter-spacing:-.02em}
+h2{font-size:1.7rem;font-weight:800;margin:8px 0 12px}
+.sub{color:var(--mu);margin:8px 0 28px;max-width:60ch}
+.back{display:inline-block;margin-bottom:20px;color:var(--mu)}
+.back a{color:var(--mu)}
+.back a:hover{color:var(--tx)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.tabs button{font:500 1rem var(--bd);color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 18px;cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--ac);color:#1a0f05;border-color:var(--ac);font-weight:700}
+a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.desc{font-size:1.15rem;max-width:60ch;margin:0 0 20px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,420px));gap:14px;align-items:start}
+figure{margin:0}
+figure a{display:block}
+figure img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line);background:var(--card)}
+.err{background:#4a1d2a;padding:16px;border-radius:8px}
+footer{margin-top:60px;color:var(--mu)}
+</style>
+</head>
+<body>
+<main>
+<nav class="back" aria-label="Breadcrumb"><a href="../">Halloween</a> · <a href="https://anayathelibrarian.github.io/">Stitches, Stories, and Spreadsheets</a></nav>
+<h1>Halloween Costume Photos</h1>
+<p class="sub">Our own costumes through the years.</p>
+<div class="tabs" id="tabs" role="group" aria-label="Choose a year"></div>
+<p id="status" class="sr" role="status"></p>
+<section id="year" aria-labelledby="yh"></section>
+<footer>Happy Halloween!</footer>
+</main>
+<script>
+let data=[];
+const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+fetch('photos.json').then(r=>r.json()).then(j=>{
+  data=j.years.slice().sort((a,b)=>b.year-a.year);
+  const t=document.getElementById('tabs');
+  t.innerHTML=data.map(d=>`<button type="button" data-y="${d.year}">${d.year}</button>`).join('');
+  t.onclick=ev=>{const y=+ev.target.dataset.y;if(y)location.hash=y};
+  const go=()=>{const y=+location.hash.slice(1);show(data.some(d=>d.year===y)?y:data[0].year)};
+  addEventListener('hashchange',go);go();
+}).catch(()=>{document.getElementById('year').innerHTML='<p class="err">Could not load photos.json. If you opened this file directly from your computer, serve the folder instead (for example, run “python3 -m http.server” and open localhost:8000).</p>'});
+function show(y){
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.y===y));
+  const d=data.find(x=>x.year===y);
+  document.getElementById('year').innerHTML=`<h2 id="yh">${y}</h2>${d.description?`<p class="desc">${e(d.description)}</p>`:''}<div class="gallery">${d.photos.map(p=>`<figure><a href="images/${encodeURI(p.file)}"><img src="images/${encodeURI(p.file)}" alt="${e(p.alt)}" loading="lazy"></a></figure>`).join('')}</div>`;
+  document.getElementById('status').textContent='Showing photos from '+y+'.';
+}
+</script>
+</body>
+</html>
